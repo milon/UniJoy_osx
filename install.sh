@@ -1,29 +1,49 @@
 #!/bin/bash
 
+# Function to display error messages and exit
+error_exit() {
+    echo "Error: $1" >&2
+    exit 1
+}
+
 # Variables
 REPO_URL="https://github.com/milon/UniJoy_osx.git"
 KEYBOARD_LAYOUTS_DIR="/Library/Keyboard Layouts"
 TMP_DIR=$(mktemp -d)
 
+# Check if the temporary directory was created successfully
+if [[ ! -d "$TMP_DIR" ]]; then
+    error_exit "Failed to create a temporary directory."
+fi
+
+# Check if git is installed
+if ! command -v git &> /dev/null; then
+    error_exit "git is not installed. Please install git and try again."
+fi
+
 # Clone the repository
 echo "Cloning UniJoy_osx repository..."
-git clone "$REPO_URL" "$TMP_DIR"
-
-# Check if the repository was cloned successfully
-if [[ ! -d "$TMP_DIR" ]]; then
-    echo "Error: Failed to clone the repository."
-    exit 1
+if ! git clone "$REPO_URL" "$TMP_DIR" &> /dev/null; then
+    rm -rf "$TMP_DIR"
+    error_exit "Failed to clone the repository. Please check your internet connection and try again."
 fi
 
 # Copy the keylayout and icon files to the Keyboard Layouts directory
 echo "Installing Bengali keyboard layout..."
-sudo cp "$TMP_DIR/UniJoy.keylayout" "$KEYBOARD_LAYOUTS_DIR/"
-sudo cp "$TMP_DIR/UniJoy.icns" "$KEYBOARD_LAYOUTS_DIR/"
+if ! sudo cp "$TMP_DIR/UniJoy.keylayout" "$KEYBOARD_LAYOUTS_DIR/"; then
+    rm -rf "$TMP_DIR"
+    error_exit "Failed to copy UniJoy.keylayout to $KEYBOARD_LAYOUTS_DIR. Please check permissions."
+fi
+
+if ! sudo cp "$TMP_DIR/UniJoy.icns" "$KEYBOARD_LAYOUTS_DIR/"; then
+    rm -rf "$TMP_DIR"
+    error_exit "Failed to copy UniJoy.icns to $KEYBOARD_LAYOUTS_DIR. Please check permissions."
+fi
 
 # Clean up temporary files
 rm -rf "$TMP_DIR"
 
-# Notify the user to manually add the keyboard layout in System Preferences
+# Success message
 echo "Installation complete!"
 echo "Please follow these steps to enable the Bengali keyboard layout:"
 echo "1. Open System Preferences -> Keyboard -> Input Sources."
